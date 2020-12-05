@@ -1,0 +1,116 @@
+from google.colab import drive
+drive.mount('/content/drive')
+cd /content/drive/MyDrive/Colab Notebooks
+ls
+# import the necessary packages
+from keras.models import Sequential
+from keras.layers.convolutional import Conv2D
+from keras.layers.convolutional import MaxPooling2D
+from keras.layers.core import Activation
+from keras.layers.core import Flatten
+from keras.layers.core import Dense
+from keras.optimizers import Adam
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from PIL import Image
+from imutils import paths
+import numpy as np
+import os
+
+# grab all image paths in the input dataset directory, then initialize
+# our list of images and corresponding class labels
+print("[INFO] loading images...")
+imagePaths = paths.list_images("GMB")
+data = []
+labels = []
+
+
+for imagePath in imagePaths:
+	image = Image.open(imagePath)
+	image = np.array(image.resize((168, 168))) / 255.0
+	data.append(image)
+
+
+	label = imagePath.split(os.path.sep)[-2]
+	labels.append(label)
+  
+  print(labels)
+  
+  lb = LabelBinarizer()
+labels = lb.fit_transform(labels)
+
+print(labels)
+
+(trainX, testX, trainY, testY) = train_test_split(np.array(data),	np.array(labels), test_size=0.25, shuffle=True)
+print(trainX.shape)
+print(testX.shape)
+
+from keras.layers import Convolution2D, MaxPool2D
+from keras.models import Sequential
+from keras.layers.core import Flatten, Dense
+
+model = Sequential()
+model.add(Convolution2D(8, (3,3), activation='relu', input_shape=(168,168,3)))
+model.add(MaxPool2D(2,2))
+model.add(Convolution2D(16, (3,3), activation='relu'))
+model.add(MaxPool2D(2,2))
+#fully connected layer
+model.add(Flatten())
+model.add(Dense(100, activation='relu'))
+model.add(Dense(5, activation='softmax'))
+
+model.summary()
+
+print("[INFO] training network...")
+opt = Adam(lr=1e-5, decay=1e-5 / 50)
+model.compile(loss="categorical_crossentropy", optimizer=opt,
+	metrics=["accuracy"])
+H = model.fit(trainX, trainY, validation_data=(testX, testY), epochs=30, batch_size=32)
+
+
+import matplotlib.pyplot as plt
+
+print(H.history.keys())
+plt.plot(H.history['accuracy'])
+plt.plot(H.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
+
+plt.plot(H.history['loss'])
+plt.plot(H.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
+
+
+print("[INFO] evaluating network...")
+predictions = model.predict(testX, batch_size=32)
+print(classification_report(testY.argmax(axis=1),
+	predictions.argmax(axis=1), target_names=lb.classes_))
+  
+  model.save('nnmodel_scene')
+  
+  import cv2
+import matplotlib.pyplot as plt
+image1='/content/drive/MyDrive/Colab Notebooks/daun ilham.jpg'
+
+img_array = cv2.imread(image1)
+plt.imshow(img_array)
+plt.show()
+
+image_testing = Image.open('/content/drive/MyDrive/Colab Notebooks/daun ilham.jpg')
+image_testing = np.array(image_testing.resize((168, 168))) / 255.0
+image_testing.shape
+
+image_testing = np.expand_dims(image_testing, axis=0)
+print(image_testing.shape)
+
+output = model.predict(image_testing, 1)
+print(output)
+print(lb.classes_[output.argmax(axis=1)])
